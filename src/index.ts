@@ -15,8 +15,9 @@ const app = express()
 // Enable CORS cho tất cả origins
 app.use(cors())
 
-// Parse JSON body
-app.use(express.json())
+// Parse JSON body with 50mb limit
+app.use(express.json({ limit: '50mb' }))
+app.use(express.urlencoded({ limit: '50mb', extended: true }))
 
 // Home route - HTML
 app.get('/', (req, res) => {
