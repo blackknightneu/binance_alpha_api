@@ -2,7 +2,7 @@ import express from 'express'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import dotenv from 'dotenv'
-import { saveData, getData, getAllData, deleteData } from './storage/fileStorage.js'
+import { saveData, getData, getAllData, deleteData } from './storage/upstashStorage.js'
 
 dotenv.config()
 
@@ -128,7 +128,7 @@ app.listen(PORT, () => {
   console.log(`API endpoints:`)
   console.log(`  POST http://localhost:${PORT}/api/data`)
   console.log(`  GET  http://localhost:${PORT}/api/data`)
-  console.log(`Data storage: JSON files in ./data directory`)
+  console.log(`Storage: Upstash Redis`)
 })
 
 export default app
