@@ -2,8 +2,7 @@ import express from 'express'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import dotenv from 'dotenv'
-import { connectDB } from './db/connection.js'
-import { Data } from './models/Data.js'
+import { saveData, getData, getAllData, deleteData } from './storage/fileStorage.js'
 
 dotenv.config()
 
@@ -66,26 +65,18 @@ app.post('/api/data', async (req, res) => {
       })
     }
 
-    // Tìm và update nếu apiKey đã tồn tại, hoặc tạo mới nếu chưa có
-    const updatedData = await Data.findOneAndUpdate(
-      { apiKey },
-      { bodyData },
-      { 
-        new: true,        // Trả về document sau khi update
-        upsert: true,     // Tạo mới nếu không tìm thấy
-        runValidators: true
-      }
-    )
+    // Lưu data vào file JSON (tự động update nếu file đã tồn tại)
+    const savedData = await saveData(apiKey, bodyData)
 
     res.status(200).json({
       success: true,
-      message: updatedData.isNew ? 'Data created successfully' : 'Data updated successfully',
-      data: updatedData
+      message: 'Data saved successfully',
+      data: savedData
     })
   } catch (error) {
-    console.error('Error upserting data:', error)
+    console.error('Error saving data:', error)
     res.status(500).json({ 
-      error: 'Failed to upsert data',
+      error: 'Failed to save data',
       details: error.message 
     })
   }
@@ -96,17 +87,30 @@ app.get('/api/data', async (req, res) => {
   try {
     const { apiKey } = req.query
 
-    let query = {}
     if (apiKey) {
-      query = { apiKey }
+      // Lấy data của apiKey cụ thể
+      const data = await getData(apiKey as string)
+      
+      if (!data) {
+        return res.status(404).json({
+          success: false,
+          error: 'Data not found for this apiKey'
+        })
+      }
+
+      return res.status(200).json({
+        success: true,
+        data
+      })
     }
 
-    const data = await Data.find(query).sort({ createdAt: -1 })
+    // Lấy tất cả data
+    const allData = await getAllData()
 
     res.status(200).json({
       success: true,
-      count: data.length,
-      data
+      count: allData.length,
+      data: allData
     })
   } catch (error) {
     console.error('Error retrieving data:', error)
@@ -117,9 +121,6 @@ app.get('/api/data', async (req, res) => {
   }
 })
 
-// Connect to MongoDB
-connectDB()
-
 const PORT = process.env.PORT || 3000
 
 app.listen(PORT, () => {
@@ -127,6 +128,8 @@ app.listen(PORT, () => {
   console.log(`API endpoints:`)
   console.log(`  POST http://localhost:${PORT}/api/data`)
   console.log(`  GET  http://localhost:${PORT}/api/data`)
+  console.log(`Data storage: JSON files in ./data directory`)
 })
 
 export default app
+
